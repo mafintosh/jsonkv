@@ -8,7 +8,9 @@ const WRITE_BUFFER = 256
 
 module.exports = createWriteStream
 
-function createWriteStream (filename) {
+function createWriteStream (filename, sort) {
+  if (!sort) sort = sortByKey
+
   const tmp = raf(filename + '.tmp', {truncate: true})
   const buckets = []
   var next = createBucket()
@@ -42,13 +44,13 @@ function createWriteStream (filename) {
       if (--missing) return
       if (error) return cb(error)
 
-      const iterator = reduceIterators(iterators)
+      const iterator = reduceIterators(iterators, sort)
       const valueSize = buckets.map(a => a.valueSize).reduce((a, b) => Math.max(a, b))
       const storage = raf(filename, {truncate: true})
 
       var length = buckets.map(a => a.size).reduce((a, b) => a + b)
       var offset = 0 // after the header
-      var block = allocSpaces(WRITE_BUFFER * (4 + valueSize + 1 + 2))
+      var block = Buffer.allocUnsafe(WRITE_BUFFER * (4 + valueSize + 1 + 2))
       var ptr = 0
 
       const header = Buffer.from(
@@ -104,7 +106,7 @@ function createWriteStream (filename) {
 
   function createBucket () {
     const start = buckets.length ? buckets[buckets.length - 1].end : 0
-    const bucket = new Bucket(tmp, start)
+    const bucket = new Bucket(tmp, start, sort)
     buckets.push(bucket)
     return bucket
   }
@@ -116,7 +118,7 @@ function emptyIterator () {
   return ite
 }
 
-function reduceIterators (iterators) {
+function reduceIterators (iterators, sort) {
   while (iterators.length > 1) {
     const tmp = []
 
@@ -131,13 +133,13 @@ function reduceIterators (iterators) {
 
           function done (err) {
             if (err) return cb(err)
-            updateValue(ite, left, right)
+            updateValue(ite, left, right, sort)
             cb(null, ite.value)
           }
         }
       })
 
-      updateValue(ite, left, right)
+      updateValue(ite, left, right, sort)
       tmp.push(ite)
     }
 
@@ -147,7 +149,7 @@ function reduceIterators (iterators) {
   return iterators[0]
 }
 
-function updateValue (ite, left, right) {
+function updateValue (ite, left, right, sort) {
   if (!left.value && !right.value) ite.value = null
   else if (!left.value) ite.value = right.value
   else if (!right.value) ite.value = left.value
@@ -160,13 +162,14 @@ function toIterator (bucket) {
 }
 
 class Bucket {
-  constructor (storage, start) {
+  constructor (storage, start, sort) {
     this.storage = storage
     this.values = []
     this.start = start
     this.end = start
     this.valueSize = 0
     this.size = 0
+    this.sort = sort
   }
 
   iterate () {
@@ -221,7 +224,7 @@ class Bucket {
   }
 
   flush (cb) {
-    this.values.sort(sort)
+    this.values.sort(this.sort)
 
     var i
     var maxSize = 0
@@ -249,8 +252,9 @@ class Bucket {
   }
 }
 
-function sort (a, b) {
-  return a.key.localeCompare(b.key)
+function sortByKey (a, b) {
+  if (a.key === b.key) return 0
+  return a.key < b.key ? -1 : 1
 }
 
 function allocSpaces (n) {

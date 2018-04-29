@@ -1,6 +1,6 @@
 const createWriteStream = require('./write-stream')
 
-const stream = createWriteStream('my.db')
+const stream = createWriteStream('db.json')
 
 for (var i = 0; i < 1000000; i++) {
   stream.write({
