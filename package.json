@@ -1,0 +1,22 @@
+{
+  "name": "wodb",
+  "version": "0.0.0",
+  "description": "Single file Write-Once Database with efficient random access on bigger datasets",
+  "main": "index.js",
+  "dependencies": {
+    "bulk-write-stream": "^1.1.4",
+    "nanoiterator": "^1.1.0",
+    "random-access-file": "^2.0.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mafintosh/wodb.git"
+  },
+  "author": "Mathias Buus (@mafintosh)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mafintosh/wodb/issues"
+  },
+  "homepage": "https://github.com/mafintosh/wodb"
+}
