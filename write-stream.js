@@ -19,8 +19,7 @@ function createWriteStream (filename, sort) {
 
   function batch (data, cb) {
     for (var i = 0; i < data.length; i++) next.push(data[i])
-    if (next.values.length < BUCKET_SIZE) return cb(null)
-
+    if (next.size < BUCKET_SIZE) return cb(null)
     next.flush(cb) // always nextticked
     next = createBucket()
   }

@@ -1,9 +1,9 @@
-# wodb
+# jsonkv
 
-Single file Write-Once Database with efficient random access on bigger datasets
+Single file write-once database that is valid JSON with efficient random access on bigger datasets
 
 ```
-npm install wodb
+npm install jsonkv
 ```
 
 (WIP)
@@ -11,10 +11,10 @@ npm install wodb
 ## Usage
 
 ``` js
-const wodb = require('wodb')
+const jsonkv = require('jsonkv')
 
-// First create a database (all data will be stored in ./my.db as JSON)
-const ws = wodb.createWriteStream('my.db')
+// First create a database (all data will be stored in ./db.json as valid JSON)
+const ws = jsonkv.createWriteStream('db.json')
 
 // Write a ton of data to it
 for (var i = 0; i < 10000; i++) {
@@ -25,9 +25,9 @@ for (var i = 0; i < 10000; i++) {
 }
 
 ws.end(function () {
-  // our wodb is now fully written and cannot be updated again.
+  // our jsonkv is now fully written and cannot be updated again.
   // to query it make an instance
-  const db = wodb('my.db')
+  const db = jsonkv('db.json')
 
   db.get(42, function (err, doc) {
     console.log(doc) // prints {key: 42, value: 'this is a value: 42'}
