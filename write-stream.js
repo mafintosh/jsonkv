@@ -45,25 +45,31 @@ function createWriteStream (filename) {
       const iterator = reduceIterators(iterators)
       const valueSize = buckets.map(a => a.valueSize).reduce((a, b) => Math.max(a, b))
       const storage = raf(filename, {truncate: true})
-      const values = buckets.map(a => a.size).reduce((a, b) => a + b)
 
-      var offset = 66 // after the header
-      var block = allocSpaces(WRITE_BUFFER * (valueSize + 2))
+      var length = buckets.map(a => a.size).reduce((a, b) => a + b)
+      var offset = 0 // after the header
+      var block = allocSpaces(WRITE_BUFFER * (4 + valueSize + 1 + 2))
       var ptr = 0
 
-      const header = allocSpaces(66) // 64 (+EOL) byte header, fixed
-      header.write(JSON.stringify({valueSize, values}), 0)
-      header.write('\r\n', 64)
+      const header = Buffer.from(
+        `{\r\n  "valueSize": ${valueSize},\r\n  "length": ${length},\r\n  "values": [\r\n`
+      )
+
+      offset = header.length
       storage.write(0, header, loop)
 
       function loop (err) {
         if (err) return flush(err)
         if (!iterator.value) return flush(null)
 
-        block.write(JSON.stringify(iterator.value), ptr)
-        ptr += valueSize
-        block.write('\r\n', ptr)
-        ptr += 2
+        length--
+        const sep = length ? ',' : ' '
+        const wrote = block.write('    ' + JSON.stringify(iterator.value) + sep, ptr)
+        const end = ptr + 4 + valueSize + 1
+
+        block.fill(32, ptr + wrote, end)
+        block.write('\r\n', end)
+        ptr = end + 2
 
         if (ptr === block.length) {
           ptr = 0
@@ -81,8 +87,10 @@ function createWriteStream (filename) {
       }
 
       function flush (err) {
-        if (err || ptr === 0) return afterWrite(err)
-        storage.write(offset, block.slice(0, ptr), afterWrite)
+        if (err) return afterWrite(err)
+        const end = Buffer.from('  ]\r\n}\r\n')
+        const buf = Buffer.concat([block.slice(0, ptr), end])
+        storage.write(offset, buf, afterWrite)
       }
 
       function afterWrite (err) {
