@@ -6,8 +6,6 @@ Single file write-once database that is valid JSON with efficient random access 
 npm install jsonkv
 ```
 
-(WIP)
-
 ## Usage
 
 ``` js
