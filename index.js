@@ -2,8 +2,6 @@ const raf = require('random-access-file')
 const nanoiterator = require('nanoiterator')
 const toStream = require('nanoiterator/to-stream')
 
-const ITERATOR_BUFFER = 256
-
 jsonkv.createWriteStream = require('./write-stream')
 module.exports = jsonkv
 
@@ -18,6 +16,8 @@ class DB {
     this.sort = opts.sort || sortByKey
     this.storage = raf(filename)
     this.valueSize = 0
+    this.pageSize = 0
+    this.iteratorSize = 0
     this.length = 0
     this.offset = 0
     this.opened = false
@@ -48,6 +48,7 @@ class DB {
 
         self.valueSize = header.valueSize
         self.pageSize = 4 + self.valueSize + 1 + 2
+        self.iteratorSize = Math.max(16, Math.floor(65536 / self.pageSize))
         self.length = header.length
         self.offset = idx + 2 + 1
         self.opened = true
@@ -107,7 +108,7 @@ class DB {
       if (ptr < block.length) return onblock(null, block)
 
       ptr = 0
-      const blockSize = Math.min(limit, ITERATOR_BUFFER) * self.pageSize
+      const blockSize = Math.min(limit, self.iteratorSize) * self.pageSize
       self.storage.read(offset, blockSize, onblock)
 
       function onblock (err, buf) {
