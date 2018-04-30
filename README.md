@@ -41,7 +41,7 @@ Create a new database by writing data to the input stream.
 
 All data should be objects and include a sortable primary key. Per default the property `key` is used. If you want to use another property pass your own sort function as in options.
 
-```
+``` js
 const ws = jsonkv.createWriteStream('db.json')
 
 ws.write({
