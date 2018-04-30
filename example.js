@@ -1,20 +1,16 @@
 const jsonkv = require('./')
 const from = require('from2')
 
+const speed = require('speedometer')()
 const db = jsonkv('db.json')
 
 if (process.argv[2] === 'write') write()
 else get()
 
 function get () {
-  db.open(function (err, doc) { // we don't need to open but do so to avoid timing it
+  db.get('hello', function (err, doc) {
     if (err) throw err
-    const then = process.hrtime()
-    db.get('hello', function (err, doc) {
-      if (err) throw err
-      const delta = process.hrtime(then)
-      console.log(delta, doc)
-    })
+    console.log(doc)
   })
 }
 
