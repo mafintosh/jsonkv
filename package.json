@@ -9,7 +9,11 @@
     "random-access-file": "^2.0.1"
   },
   "devDependencies": {
-    "from2": "^2.3.0"
+    "from2": "^2.3.0",
+    "standard": "^11.0.1"
+  },
+  "scripts": {
+    "test": "standard"
   },
   "repository": {
     "type": "git",

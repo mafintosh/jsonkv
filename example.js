@@ -1,7 +1,6 @@
 const jsonkv = require('./')
 const from = require('from2')
 
-const speed = require('speedometer')()
 const db = jsonkv('db.json')
 
 if (process.argv[2] === 'write') write()
