@@ -1,4 +1,6 @@
 const raf = require('random-access-file')
+const nanoiterator = require('nanoiterator')
+const toStream = require('nanoiterator/to-stream')
 
 jsonkv.createWriteStream = require('./write-stream')
 module.exports = jsonkv
@@ -52,13 +54,84 @@ class DB {
     })
   }
 
-  get (key, cb) {
-    if (!this.opened) return openAndGet(this, key, cb)
+  createReadStream (opts) {
+    return toStream(this.iterator(opts))
+  }
+
+  iterate (opts) {
+    if (!opts) opts = {}
+
+    const self = this
+    const g = opts.gte || opts.gt
+    const l = opts.lte || opts.lt
+    const start = g && typeof g === 'object' ? g : {key: g}
+    const end = l && typeof l === 'object' ? l : {key: l}
+
+    var offset = 0
+    var limit = 0
+
+    return nanoiterator({
+      open,
+      next
+    })
+
+    function open (cb) {
+      if (!start) return self.open(cb)
+      self.get(start, {closest: true}, onstart)
+
+      function onstart (err, val, seq) {
+        if (err) return cb(err)
+
+        offset = self.offset + seq * (4 + self.valueSize + 1 + 2)
+        limit = val ? self.length - seq : 0
+        if (limit <= 0) return cb(null)
+
+        const cmp = self.sort(val, start)
+        if (opts.gte && cmp >= 0) return cb(null)
+        if (opts.gt && cmp > 0) return cb(null)
+
+        offset += (4 + self.valueSize + 1 + 2)
+        next((err, val) => onstart(err, val, seq + 1))
+      }
+    }
+
+    function next (cb) {
+      if (!offset) {
+        offset = self.offset
+        limit = self.length
+      }
+
+      if (!limit) return cb(null, null)
+
+      self.storage.read(offset, 4 + self.valueSize, function (err, buf) {
+        if (err) return cb(err)
+
+        offset += 4 + self.valueSize + 1 + 2
+        limit--
+
+        const val = decodeValue(buf)
+        if (!val) return cb(new Error('Invalid database entry'))
+
+        if (end) {
+          const cmp = self.sort(val, end)
+          if (opts.lte && cmp > 0) return cb(null, null)
+          if (opts.lt && cmp >= 0) return cb(null, null)
+        }
+
+        cb(null, val)
+      })
+    }
+  }
+
+  get (key, opts, cb) {
+    if (typeof opts === 'function') return this.get(key, null, opts)
+    if (!this.opened) return openAndGet(this, key, opts, cb)
 
     const self = this
     const target = typeof key === 'object' ? key : {key}
+    const closest = !!(opts && opts.closest)
 
-    var top = this.length - 1
+    var top = this.length
     var btm = 0
     var mid = Math.floor((top + btm) / 2)
 
@@ -66,21 +139,14 @@ class DB {
       if (err) return cb(err)
 
       const cmp = self.sort(target, val)
-      if (!cmp) return cb(null, val)
-      if (top <= btm) return cb(null, null)
+
+      if (!cmp) return cb(null, val, mid)
+      if (top - btm <= 1) return cb(null, closest ? val : null, mid)
 
       if (cmp < 0) top = mid
       else btm = mid
 
-      const next = Math.floor((top + btm) / 2)
-
-      if (next === mid) {
-        mid = next + 1
-        top = btm
-      } else {
-        mid = next
-      }
-
+      mid = Math.floor((top + btm) / 2)
       getValue(self, mid, loop)
     })
   }
@@ -99,15 +165,15 @@ function getValue (db, idx, cb) {
 }
 
 function decodeValue (buf) {
-  const val = decode('[' + buf + '{}]')
+  const val = decode('[' + buf + 'null]')
   if (val) return val[0]
   return decode(buf.toString())
 }
 
-function openAndGet (db, key, cb) {
+function openAndGet (db, key, opts, cb) {
   db.open(function (err) {
     if (err) return cb(err)
-    db.get(key, cb)
+    db.get(key, opts, cb)
   })
 }
 
