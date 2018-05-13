@@ -14,7 +14,7 @@ class DB {
     if (typeof opts === 'function') opts = {sort: opts}
     if (!opts) opts = {}
     this.sort = opts.sort || sortByKey
-    this.storage = raf(filename)
+    this.storage = typeof filename === 'string' ? raf(filename) : filename
     this.valueSize = 0
     this.pageSize = 0
     this.iteratorSize = 0
