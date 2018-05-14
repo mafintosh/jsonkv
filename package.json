@@ -1,6 +1,6 @@
 {
   "name": "jsonkv",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Single file write-once database that is valid JSON with efficient random access on bigger datasets",
   "main": "index.js",
   "dependencies": {
