@@ -63,6 +63,10 @@ class DB {
   }
 
   iterate (opts) {
+    return this.iterator(opts) // backwards compat
+  }
+
+  iterator (opts) {
     if (!opts) opts = {}
 
     const self = this
