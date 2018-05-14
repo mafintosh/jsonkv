@@ -136,6 +136,10 @@ class DB {
     }
   }
 
+  getByIndex (index, cb) {
+    getValue(this, index, cb)
+  }
+
   get (key, opts, cb) {
     if (typeof opts === 'function') return this.get(key, null, opts)
     if (!this.opened) return openAndGet(this, key, opts, cb)
@@ -144,9 +148,10 @@ class DB {
     const target = typeof key === 'object' ? key : {key}
     const closest = !!(opts && opts.closest)
 
+    var midpoint = (opts && opts.midpoint) || defaultMidpoint
     var top = this.length
     var btm = 0
-    var mid = Math.floor((top + btm) / 2)
+    var mid = midpoint(btm, top)
 
     getValue(this, mid, function loop (err, val) {
       if (err) return cb(err)
@@ -159,7 +164,10 @@ class DB {
       if (cmp < 0) top = mid
       else btm = mid
 
-      mid = Math.floor((top + btm) / 2)
+      const nextMid = midpoint(btm, top)
+      if (nextMid === mid) return cb(null, closest ? val : null, mid)
+      mid = nextMid
+
       getValue(self, mid, loop)
     })
   }
@@ -167,6 +175,10 @@ class DB {
   destroy (cb) {
     this.storage.destroy(cb)
   }
+}
+
+function defaultMidpoint (btm, top) {
+  return Math.floor((top + btm) / 2)
 }
 
 function getValue (db, idx, cb) {
