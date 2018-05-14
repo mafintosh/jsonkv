@@ -159,6 +159,10 @@ class DB {
       getValue(self, mid, loop)
     })
   }
+
+  destroy (cb) {
+    this.storage.destroy(cb)
+  }
 }
 
 function getValue (db, idx, cb) {
