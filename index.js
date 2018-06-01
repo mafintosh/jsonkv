@@ -43,11 +43,14 @@ class DB {
           ? buf.lastIndexOf(91)
           : buf.indexOf(91)
 
+        const nl = buf.indexOf(10) // \n
+        const cr = nl < 1 || buf[nl - 1] === 13 // \r\n
+
         const header = decode(buf.toString('utf-8', 0, idx + 1) + ']}')
         if (!header) return cb(new Error('Database has an invalid header'))
 
         self.valueSize = header.valueSize
-        self.pageSize = 4 + self.valueSize + 1 + 2
+        self.pageSize = 4 + self.valueSize + 1 + (cr ? 2 : 1)
         self.iteratorSize = Math.max(16, Math.floor(65536 / self.pageSize))
         self.length = header.length
         self.offset = idx + 2 + 1
